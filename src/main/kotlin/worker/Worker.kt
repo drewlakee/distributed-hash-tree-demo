@@ -117,7 +117,11 @@ private fun <T : HashableEntity> mergeCollections(
 }
 
 private fun <T : HashableEntity> calculateNewHashTree(hashedItems: List<T>, singleHashElementsRange: Int): List<Int> {
-    return hashedItems.windowed(singleHashElementsRange)
+    return hashedItems.windowed(
+        size = singleHashElementsRange,
+        step = singleHashElementsRange,
+        partialWindows = true,
+    )
         .map { it.joinToString(prefix = "").hashCode() }
         .let { hashes ->
             buildList {
