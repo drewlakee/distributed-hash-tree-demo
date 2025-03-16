@@ -86,6 +86,8 @@ suspend fun main() {
                 )
             }
 
+        println("Current Revision: $currentRevision")
+
         when (update.careersUpdateStrategy) {
             UpdateStrategy.DELTA -> currentRevision.apply {
                 careersCollection = delta(
@@ -105,8 +107,7 @@ suspend fun main() {
         currentRevision.careersHashTree = update.careersHashTree
 
         println("New Update: $update")
-        println("-----------APPLIED TO-----------")
-        println("Current Revision: ${currentRevision}\n\n\n")
+        println("New Revision: ${currentRevision}\n\n\n")
     }
 }
 
