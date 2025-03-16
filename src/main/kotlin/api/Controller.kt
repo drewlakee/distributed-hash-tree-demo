@@ -15,9 +15,15 @@ data class Request(
     val careersHashTree: List<Int>,
 )
 
+enum class UpdateStrategy {
+    DELTA,
+    INITIAL_DELIVERY,
+}
+
 class Response {
     var singleHashElementsRange: Int = 0
     var careersHashTree: List<Int> = listOf()
+    var careersUpdateStrategy: UpdateStrategy = UpdateStrategy.INITIAL_DELIVERY
     var careersCollection: List<CareerRecord?> = listOf()
 }
 
@@ -38,6 +44,7 @@ class Controller {
             singleHashElementsRange = snapshot.singleHashElementsRange
             careersHashTree = snapshot.careersHashTree
             careersCollection = listOf()
+            careersUpdateStrategy = UpdateStrategy.INITIAL_DELIVERY
 
             if (
                 request.careersHashTree.isEmpty()
@@ -46,6 +53,7 @@ class Controller {
             ) {
                 careersCollection = snapshot.careersCollection.map { it.item }
             } else if (request.careersHashTree[0] != snapshot.careersHashTree[0] || request.careersHashTree.size <= snapshot.careersHashTree.size) {
+                careersUpdateStrategy = UpdateStrategy.DELTA
                 careersCollection = buildList {
                     for ((index, hash) in snapshot.careersHashTree.withIndex().drop(1)) {
                         if (request.careersHashTree.size < index + 1) {

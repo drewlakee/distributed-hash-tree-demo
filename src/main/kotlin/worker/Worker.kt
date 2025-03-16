@@ -13,7 +13,8 @@ import java.time.Instant
 
 class Worker
 
-const val FS_PROPERTIES = "C:\\Users\\user\\IdeaProjects\\sandbox\\src\\main\\resources\\application.properties"
+// example "C:\\Users\\user\\IdeaProjects\\sandbox\\src\\main\\resources\\application.properties"
+val FS_PROPERTIES = System.getenv("FS_PROPERTIES")
 val JSON_MAPPER = ObjectMapper()
 
 private fun <T> T.toJsonAndHashCode(): Int = JSON_MAPPER.writeValueAsString(this).hashCode()
@@ -137,10 +138,10 @@ private fun singleHashElementsRange(): Int = File(FS_PROPERTIES).readLines()
     .first { it.startsWith("single.hash.elements.range") }
     .split("=")
     .last()
-    .toInt().also { println("single hash elements range is $it") }
+    .toInt().also { println("Single Hash Elements Range for Snapshot: $it") }
 
 private fun delayMillis(): Long = File(FS_PROPERTIES).readLines()
     .first { it.startsWith("worker.periodic.millis") }
     .split("=")
     .last()
-    .toLong().also { println("delayed for $it ms") }
+    .toLong().also { println("Worker has been executed and delayed: $it ms") }
