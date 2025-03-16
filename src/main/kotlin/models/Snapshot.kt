@@ -6,8 +6,10 @@ import java.util.*
 data class Snapshot(
     @BsonId
     var id: String = UUID.randomUUID().toString(),
-    var lastSnapshotCreation: Long,
-    var lastGarbageCollectionUpdate: Long,
+    var created: Long,
+    // a point at time which insists on initial snapshot delivery on clients
+    var lastForcedInitialDelivery: Long,
+    var singleHashElementsRange: Int,
     var careersHashTree: List<Int>,
     var careersCollection: List<HashedCareer>,
 )

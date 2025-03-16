@@ -28,21 +28,24 @@ suspend fun main() {
         .getCollection<Snapshot>("snapshots")
 
     periodic {
-        val careers = runBlocking { careersCollection.find().toCollection(ArrayList()) }.map {
-            HashedCareer(
-                hashCode = it.toJsonAndHashCode(),
-                item = it,
-            )
-        }
+        val careersCollection = runBlocking { careersCollection.find().toCollection(ArrayList()) }
+            .map {
+                HashedCareer(
+                    hashCode = it.toJsonAndHashCode(),
+                    item = it,
+                )
+            }
         val currentSnapshot = runBlocking { snapshotsCollection.find().firstOrNull() }
+        val singleHashElementsRange = singleHashElementsRange()
         if (currentSnapshot == null) {
             runBlocking {
                 snapshotsCollection.insertOne(
                     Snapshot(
-                        lastSnapshotCreation = Instant.now().toEpochMilli(),
-                        lastGarbageCollectionUpdate = Instant.now().toEpochMilli(),
-                        careersHashTree = calculateNewHashTree(careers),
-                        careersCollection = careers,
+                        created = Instant.now().toEpochMilli(),
+                        lastForcedInitialDelivery = Instant.now().toEpochMilli(),
+                        careersHashTree = calculateNewHashTree(careersCollection, singleHashElementsRange),
+                        careersCollection = careersCollection,
+                        singleHashElementsRange = singleHashElementsRange,
                     )
                 )
             }
@@ -50,16 +53,17 @@ suspend fun main() {
             runBlocking {
                 val mergedItems = mergeCollections(
                     currentItems = currentSnapshot.careersCollection,
-                    newItems = careers,
+                    newItems = careersCollection,
                     removed = HashedCareer(NULL_HASH_CODE)
                 ) { career -> HashedCareer(career.hashCode, career.item) }
 
                 snapshotsCollection.replaceOne(
                     Filters.eq(currentSnapshot.id),
                     currentSnapshot.apply {
-                        this.lastSnapshotCreation = Instant.now().toEpochMilli()
-                        this.careersHashTree = calculateNewHashTree(mergedItems)
+                        this.created = Instant.now().toEpochMilli()
+                        this.careersHashTree = calculateNewHashTree(mergedItems, singleHashElementsRange)
                         this.careersCollection = mergedItems
+                        this.singleHashElementsRange = singleHashElementsRange
                     },
                 )
             }
@@ -111,8 +115,8 @@ private fun <T : HashableEntity> mergeCollections(
     return merged
 }
 
-private fun <T : HashableEntity> calculateNewHashTree(hashedItems: List<T>): List<Int> {
-    return hashedItems.windowed(singleHashElementsRange())
+private fun <T : HashableEntity> calculateNewHashTree(hashedItems: List<T>, singleHashElementsRange: Int): List<Int> {
+    return hashedItems.windowed(singleHashElementsRange)
         .map { it.joinToString(prefix = "").hashCode() }
         .let { hashes ->
             buildList {
