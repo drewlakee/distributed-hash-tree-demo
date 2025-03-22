@@ -11,6 +11,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse
+import java.time.Instant
 
 class Client
 
@@ -21,6 +22,8 @@ private fun String.toJson(): String = JSON_MAPPER.writerWithDefaultPrettyPrinter
 private fun String.toJsonNode(): JsonNode = JSON_MAPPER.readTree(this)
 
 data class Revision(
+    var lastInitialDelivery: Long = 0,
+    var lastUpdate: Long = 0,
     var singleHashElementsRange: Int = 0,
     var careersHashTree: List<Int> = listOf(),
     var careersCollection: List<String> = listOf(),
@@ -28,6 +31,10 @@ data class Revision(
     override fun toString(): String {
         return """
             {
+                "lastInitialDelivery": $lastInitialDelivery,
+                "lastInitialDeliveryHuman": "${Instant.ofEpochMilli(lastInitialDelivery)}",
+                "lastUpdate": $lastUpdate,
+                "lastUpdateHuman": "${Instant.ofEpochMilli(lastUpdate)}",
                 "singleHashElementsRange": $singleHashElementsRange,
                 "careersHashTree": $careersHashTree,
                 "careersCollection": $careersCollection
@@ -37,11 +44,13 @@ data class Revision(
 }
 
 enum class UpdateStrategy {
-    DELTA,
+    DELTA_UPDATE,
+    SKIP_UPDATE,
     INITIAL_DELIVERY,
 }
 
 data class Update(
+    var created: Long = 0,
     var singleHashElementsRange: Int = 0,
     var careersUpdateStrategy: UpdateStrategy = UpdateStrategy.INITIAL_DELIVERY,
     var careersHashTree: List<Int> = listOf(),
@@ -50,6 +59,7 @@ data class Update(
     override fun toString(): String {
         return """
             {
+                "created": $created,
                 "singleHashElementsRange": $singleHashElementsRange,
                 "careersUpdateStrategy": "$careersUpdateStrategy",
                 "careersHashTree": $careersHashTree,
@@ -79,6 +89,7 @@ suspend fun main() {
         ).body().toJsonNode()
             .let {
                 Update(
+                    created = it.get("created").asLong(),
                     singleHashElementsRange = it.get("singleHashElementsRange").asInt(),
                     careersUpdateStrategy = it.get("careersUpdateStrategy").textValue().let { UpdateStrategy.valueOf(it) },
                     careersHashTree = it.withArray<JsonNode>("careersHashTree").map { it.asInt() },
@@ -89,7 +100,7 @@ suspend fun main() {
         println("Current Revision: $currentRevision")
 
         when (update.careersUpdateStrategy) {
-            UpdateStrategy.DELTA -> currentRevision.apply {
+            UpdateStrategy.DELTA_UPDATE -> currentRevision.apply {
                 careersCollection = delta(
                     currentRevision.singleHashElementsRange,
                     currentRevision.careersCollection,
@@ -97,14 +108,18 @@ suspend fun main() {
                     update.careersCollection,
                     update.careersHashTree,
                 )
+                careersHashTree = update.careersHashTree
+                lastUpdate = update.created
             }
             UpdateStrategy.INITIAL_DELIVERY -> currentRevision.apply {
                 careersCollection = update.careersCollection
                 singleHashElementsRange = update.singleHashElementsRange
+                careersHashTree = update.careersHashTree
+                lastUpdate = update.created
+                lastInitialDelivery = update.created
             }
+            UpdateStrategy.SKIP_UPDATE -> {}
         }
-
-        currentRevision.careersHashTree = update.careersHashTree
 
         println("New Update: $update")
         println("New Revision: ${currentRevision}\n\n\n")

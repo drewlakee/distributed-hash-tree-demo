@@ -122,7 +122,7 @@ private fun <T : HashableEntity> calculateNewHashTree(hashedItems: List<T>, sing
         step = singleHashElementsRange,
         partialWindows = true,
     )
-        .map { it.joinToString(prefix = "").hashCode() }
+        .map { it.map(HashableEntity::hash).joinToString(prefix = "").hashCode() }
         .let { hashes ->
             buildList {
                 add(hashes.joinToString(prefix = "").hashCode())

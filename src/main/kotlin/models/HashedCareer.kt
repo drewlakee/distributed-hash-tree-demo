@@ -6,4 +6,5 @@ data class HashedCareer(
 ) : HashableEntity {
     override fun identity() = item?.id.toString()
     override fun isRemoved() = item == null
+    override fun hash() = hashCode
 }
