@@ -1,6 +1,6 @@
 # distributed-hash-tree-demo
 
-An example project to observe a possible way of distributed in-memory cache implementation 
+An example project to observe a possible way of distributed in-memory caching implementation 
 with an invalidation protocol and delta fetching from a data-set over the network.
 
 Initial concept for implementation was Merkle Tree with binary hash-tree, 
