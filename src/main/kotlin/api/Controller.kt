@@ -49,10 +49,7 @@ class Controller {
             lastUpdate = snapshot.created
             careersUpdateStrategy = UpdateStrategy.SKIP_UPDATE
 
-            if (
-                request.careersHashTree.isEmpty()
-                || request.singleHashElementsRange != snapshot.singleHashElementsRange
-            ) {
+            if (request.careersHashTree.isEmpty() || request.singleHashElementsRange != snapshot.singleHashElementsRange) {
                 lastUpdate = snapshot.created
                 singleHashElementsRange = snapshot.singleHashElementsRange
                 careersUpdateStrategy = UpdateStrategy.INITIAL_DELIVERY
