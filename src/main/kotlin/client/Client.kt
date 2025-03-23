@@ -1,6 +1,7 @@
 package client
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.module.kotlin.contains
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.delay
 import worker.FS_PROPERTIES
@@ -50,16 +51,16 @@ enum class UpdateStrategy {
 }
 
 data class Update(
-    var created: Long = 0,
-    var singleHashElementsRange: Int = 0,
+    var lastUpdate: Long = 0,
+    var singleHashElementsRange: Int? = null,
     var careersUpdateStrategy: UpdateStrategy = UpdateStrategy.INITIAL_DELIVERY,
-    var careersHashTree: List<Int> = listOf(),
-    var careersCollection: List<String> = listOf(),
+    var careersHashTree: List<Int>? = null,
+    var careersCollection: List<String>? = null,
 ) {
     override fun toString(): String {
         return """
             {
-                "created": $created,
+                "lastUpdate": $lastUpdate,
                 "singleHashElementsRange": $singleHashElementsRange,
                 "careersUpdateStrategy": "$careersUpdateStrategy",
                 "careersHashTree": $careersHashTree,
@@ -74,26 +75,29 @@ suspend fun main() {
 
     val currentRevision = Revision()
     periodic {
-        val update = http.send(
-            HttpRequest.newBuilder().POST(
-                BodyPublishers.ofString(
-                    """
+        var request = """
                         {
+                            "lastUpdate": ${currentRevision.lastUpdate},
                             "singleHashElementsRange": ${currentRevision.singleHashElementsRange},
                             "careersHashTree": ${currentRevision.careersHashTree}
                         }
                     """.trimIndent()
-                )
-            ).header("Content-Type", "application/json").uri(URI.create("http://localhost:8080/snapshot")).build(),
+        println("Request: $request")
+        val update = http.send(
+            HttpRequest.newBuilder()
+                .POST(BodyPublishers.ofString(request))
+                .header("Content-Type", "application/json")
+                .uri(URI.create("http://localhost:8080/snapshot"))
+                .build(),
             HttpResponse.BodyHandlers.ofString()
         ).body().toJsonNode()
             .let {
                 Update(
-                    created = it.get("created").asLong(),
-                    singleHashElementsRange = it.get("singleHashElementsRange").asInt(),
+                    lastUpdate = it.get("lastUpdate").asLong(),
+                    singleHashElementsRange = if (it.contains("singleHashElementsRange")) it.get("singleHashElementsRange").asInt() else null,
                     careersUpdateStrategy = it.get("careersUpdateStrategy").textValue().let { UpdateStrategy.valueOf(it) },
-                    careersHashTree = it.withArray<JsonNode>("careersHashTree").map { it.asInt() },
-                    careersCollection = it.withArray<JsonNode>("careersCollection").map { it.toPrettyString() }
+                    careersHashTree = if (it.contains("careersHashTree")) it.withArray<JsonNode>("careersHashTree").map { it.asInt() } else null,
+                    careersCollection = if (it.contains("careersCollection")) it.withArray<JsonNode>("careersCollection").map { it.toPrettyString() } else null
                 )
             }
 
@@ -105,18 +109,18 @@ suspend fun main() {
                     currentRevision.singleHashElementsRange,
                     currentRevision.careersCollection,
                     currentRevision.careersHashTree,
-                    update.careersCollection,
-                    update.careersHashTree,
+                    update.careersCollection!!,
+                    update.careersHashTree!!,
                 )
-                careersHashTree = update.careersHashTree
-                lastUpdate = update.created
+                careersHashTree = update.careersHashTree!!
+                lastUpdate = update.lastUpdate
             }
             UpdateStrategy.INITIAL_DELIVERY -> currentRevision.apply {
-                careersCollection = update.careersCollection
-                singleHashElementsRange = update.singleHashElementsRange
-                careersHashTree = update.careersHashTree
-                lastUpdate = update.created
-                lastInitialDelivery = update.created
+                careersCollection = update.careersCollection!!
+                singleHashElementsRange = update.singleHashElementsRange!!
+                careersHashTree = update.careersHashTree!!
+                lastUpdate = update.lastUpdate
+                lastInitialDelivery = update.lastUpdate
             }
             UpdateStrategy.SKIP_UPDATE -> {}
         }
