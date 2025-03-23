@@ -28,7 +28,7 @@ class Response {
     var lastUpdate: Long = 0
     var singleHashElementsRange: Int? = null
     var careersHashTree: List<Int>? = null
-    var careersUpdateStrategy: UpdateStrategy = UpdateStrategy.INITIAL_DELIVERY
+    var careersUpdateStrategy: UpdateStrategy = UpdateStrategy.SKIP_UPDATE
     var careersCollection: List<CareerRecord?>? = null
 }
 
